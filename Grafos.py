@@ -250,37 +250,18 @@ grafo = Grafo(5, True, False)
 v1 = Vertice("JFK", "Nueva York Airport", "New York", "USA", 40.639751, -73.778925)
 v2 = Vertice("LAX", "Los Angeles Airport", "Los Angeles", "USA", 33.942791, -118.410042)
 v3 = Vertice("MIA", "Miami International", "Miami", "USA", 25.79325, -80.290556)
-v4 = Vertice("JFK", "Nueva York Airport", "New York", "USA", 40.639751, -73.778925)  # Repetido
+v4 = Vertice("JFK", "Nueva York Airport", "New York", "USA", 40.639751, -73.778925)
 v5 = Vertice("MIA", "Miami International", "Miami", "USA", 25.79325, -80.290556)
 grafo.agregar_vertice(0, v1)
 grafo.agregar_vertice(1, v2)
 grafo.agregar_vertice(2, v3)
 grafo.agregar_vertice(3, v4)
 grafo.agregar_vertice(4, v4)
-grafo.agregar_arista(0, 1, 500)  # JFK → LAX 
-grafo.agregar_arista(1, 2, 400)  # LAX → MIA
-grafo.agregar_arista(2, 0, 600)  # MIA → JFK
-grafo.agregar_arista(0, 1, 500)  # 🔁 Repetida (JFK–LAX)
+grafo.agregar_arista(0, 1, 500)
 grafo.agregar_arista(1, 2, 400)
-
-
-
-
-
-def encontrar_aristas_repetidas(df):
-    aristas = df.apply(lambda fila: tuple(sorted([
-        fila["Source Airport Code"], fila["Destination Airport Code"]
-    ])), axis=1)
-    
-    duplicados = aristas[aristas.duplicated(keep=False)]
-    
-    repetidas = {}
-    for arista in duplicados.unique():
-        indices = duplicados[duplicados == arista].index.tolist()
-        repetidas[arista] = indices
-    
-    return repetidas
-
+grafo.agregar_arista(2, 0, 600)
+grafo.agregar_arista(0, 1, 500)
+grafo.agregar_arista(1, 2, 400)
 
 
 
@@ -292,51 +273,3 @@ df1 = g1.haversine(df1)
 g1.vuelos(df1, "Haversine")
 g1.mostrar()
 g1.conexidad()
-
-df2 = df.head(1000)
-resultado = encontrar_aristas_repetidas(df2)
-print(resultado)
-
-vertices = {
-    "JFK": ("Nueva York Airport", "New York", "USA", 40.639751, -73.778925),
-    "LAX": ("Los Angeles Airport", "Los Angeles", "USA", 33.942791, -118.410042),
-    "MIA": ("Miami International", "Miami", "USA", 25.79325, -80.290556)
-}
-
-aristas = [
-    ("JFK", "LAX"),  # vuelo 1
-    ("LAX", "MIA"),  # vuelo 2
-    ("MIA", "JFK"),  # vuelo 3
-    ("JFK", "LAX"),  # 🔁 repetida
-    ("LAX", "MIA")   # 🔁 repetida
-]
-
-filas = []
-for origen, destino in aristas:
-    aeropuerto_origen = vertices[origen]
-    aeropuerto_destino = vertices[destino]
-    
-    filas.append({
-        "Source Airport Code": origen,
-        "Source Airport Name": aeropuerto_origen[0],
-        "Source Airport City": aeropuerto_origen[1],
-        "Source Airport Country": aeropuerto_origen[2],
-        "Source Airport Latitude": aeropuerto_origen[3],
-        "Source Airport Longitude": aeropuerto_origen[4],
-        "Destination Airport Code": destino,
-        "Destination Airport Name": aeropuerto_destino[0],
-        "Destination Airport City": aeropuerto_destino[1],
-        "Destination Airport Country": aeropuerto_destino[2],
-        "Destination Airport Latitude": aeropuerto_destino[3],
-        "Destination Airport Longitude": aeropuerto_destino[4]
-    })
-
-df3 = pd.DataFrame(filas)
-
-g3 = Grafo(len(df3), True, False)
-g3.aeropuertos(df3)
-df2 = g3.haversine(df3)
-g3.vuelos(df3, "Haversine")
-g3.mostrar()
-resultados3 = encontrar_aristas_repetidas(df3)
-print(resultados3)
