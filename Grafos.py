@@ -93,22 +93,40 @@ class Grafo:
         aeropuertos = []
 
         for _, fila in df.iterrows():
-            aeropuertos.append((
+            origen = (
                 fila["Source Airport Code"],
                 fila["Source Airport Name"],
                 fila["Source Airport City"],
                 fila["Source Airport Country"],
                 fila["Source Airport Latitude"],
                 fila["Source Airport Longitude"]
-            ))
-            aeropuertos.append((
+            )
+            destino = (
                 fila["Destination Airport Code"],
                 fila["Destination Airport Name"],
                 fila["Destination Airport City"],
                 fila["Destination Airport Country"],
                 fila["Destination Airport Latitude"],
                 fila["Destination Airport Longitude"]
-            ))
+            )
+        
+            origen_repetido = False
+            for a in aeropuertos:
+                if a[0] == origen[0]:
+                    origen_repetido = True
+                    break
+
+            if not origen_repetido:
+                aeropuertos.append(origen)
+
+            destino_repetido = False
+            for a in aeropuertos:
+                if a[0] == destino[0]:
+                    destino_repetido = True
+                    break
+
+            if not destino_repetido:
+                aeropuertos.append(destino)
 
         df_aeropuertos = pd.DataFrame(aeropuertos, columns=[
         "CODE", "AIRPORT", "CITY", "COUNTRY", "LAT", "LON"])
@@ -154,6 +172,8 @@ class Grafo:
 
 
     def vuelos(self, df, columna_peso=None):
+        aristas = []
+
         for _, fila in df.iterrows():
             u = self.indice_por_codigo(fila["Source Airport Code"])
             v = self.indice_por_codigo(fila["Destination Airport Code"])
@@ -166,7 +186,15 @@ class Grafo:
             else:
                 peso = 1
 
-            self.agregar_arista(u, v, peso)
+            repetida = False
+            for a in aristas:
+                if ((a[0] == u and a[1] == v) or (a[0] == v and a[1] == u)):
+                    repetida = True
+                    break
+
+            if not repetida:
+                self.agregar_arista(u, v, peso)
+                aristas.append((u, v))
     
 
 
@@ -218,48 +246,40 @@ class Grafo:
 
 
 # Pruebas
-grafo = Grafo(4, True, False)
+grafo = Grafo(5, True, False)
 v1 = Vertice("JFK", "Nueva York Airport", "New York", "USA", 40.639751, -73.778925)
-v2 = Vertice("LAX", "LA Airport", "Los Ángeles", "USA", 33.942791, -118.410042)
-v3 = Vertice("LHR", "Heathrow Airport", "London", "United Kingdom", 51.470020, -0.454295)
-v4 = Vertice("HND", "Haneda Airport", "Tokyo", "Japan", 35.549393, 139.779838)
+v2 = Vertice("LAX", "Los Angeles Airport", "Los Angeles", "USA", 33.942791, -118.410042)
+v3 = Vertice("MIA", "Miami International", "Miami", "USA", 25.79325, -80.290556)
+v4 = Vertice("JFK", "Nueva York Airport", "New York", "USA", 40.639751, -73.778925)  # Repetido
+v5 = Vertice("MIA", "Miami International", "Miami", "USA", 25.79325, -80.290556)
 grafo.agregar_vertice(0, v1)
 grafo.agregar_vertice(1, v2)
 grafo.agregar_vertice(2, v3)
 grafo.agregar_vertice(3, v4)
-grafo.agregar_arista(0, 1, 500)
-grafo.agregar_arista(2, 3, 100)
+grafo.agregar_vertice(4, v4)
+grafo.agregar_arista(0, 1, 500)  # JFK → LAX 
+grafo.agregar_arista(1, 2, 400)  # LAX → MIA
+grafo.agregar_arista(2, 0, 600)  # MIA → JFK
+grafo.agregar_arista(0, 1, 500)  # 🔁 Repetida (JFK–LAX)
+grafo.agregar_arista(1, 2, 400)
 
 
 
-def detectar_repetidos(df):
-    # 1️⃣ Caso 1: repetidos dentro de la misma fila (origen = destino)
-    mismos_en_fila = df[df['Source Airport Code'] == df['Destination Airport Code']]
 
-    # 2️⃣ Caso 2: repetidos en distintas filas (aparece más de una vez en total)
-    # Unimos todas las apariciones de aeropuertos (origen y destino)
-    todos_aeropuertos = pd.concat([df['Source Airport Code'], df['Destination Airport Code']], ignore_index=True)
 
-    # Contamos cuántas veces aparece cada aeropuerto
-    conteo = todos_aeropuertos.value_counts()
-
-    # Filtramos los que aparecen más de una vez
-    repetidos = conteo[conteo > 1]
-
-    # Mostrar resultados
-    if not mismos_en_fila.empty:
-        print("✈️ Aeropuertos repetidos dentro de la misma fila (origen = destino):")
-        print(mismos_en_fila[['Source Airport Code', 'Destination Airport Code']])
-    else:
-        print("✅ No hay aeropuertos repetidos dentro de la misma fila")
-
-    if not repetidos.empty:
-        print("\n🛫 Aeropuertos que se repiten en distintas filas:")
-        print(repetidos)
-    else:
-        print("✅ No hay aeropuertos repetidos entre filas")
-
-    return mismos_en_fila, repetidos
+def encontrar_aristas_repetidas(df):
+    aristas = df.apply(lambda fila: tuple(sorted([
+        fila["Source Airport Code"], fila["Destination Airport Code"]
+    ])), axis=1)
+    
+    duplicados = aristas[aristas.duplicated(keep=False)]
+    
+    repetidas = {}
+    for arista in duplicados.unique():
+        indices = duplicados[duplicados == arista].index.tolist()
+        repetidas[arista] = indices
+    
+    return repetidas
 
 
 
@@ -273,4 +293,50 @@ g1.vuelos(df1, "Haversine")
 g1.mostrar()
 g1.conexidad()
 
-detectar_repetidos(df1)
+df2 = df.head(1000)
+resultado = encontrar_aristas_repetidas(df2)
+print(resultado)
+
+vertices = {
+    "JFK": ("Nueva York Airport", "New York", "USA", 40.639751, -73.778925),
+    "LAX": ("Los Angeles Airport", "Los Angeles", "USA", 33.942791, -118.410042),
+    "MIA": ("Miami International", "Miami", "USA", 25.79325, -80.290556)
+}
+
+aristas = [
+    ("JFK", "LAX"),  # vuelo 1
+    ("LAX", "MIA"),  # vuelo 2
+    ("MIA", "JFK"),  # vuelo 3
+    ("JFK", "LAX"),  # 🔁 repetida
+    ("LAX", "MIA")   # 🔁 repetida
+]
+
+filas = []
+for origen, destino in aristas:
+    aeropuerto_origen = vertices[origen]
+    aeropuerto_destino = vertices[destino]
+    
+    filas.append({
+        "Source Airport Code": origen,
+        "Source Airport Name": aeropuerto_origen[0],
+        "Source Airport City": aeropuerto_origen[1],
+        "Source Airport Country": aeropuerto_origen[2],
+        "Source Airport Latitude": aeropuerto_origen[3],
+        "Source Airport Longitude": aeropuerto_origen[4],
+        "Destination Airport Code": destino,
+        "Destination Airport Name": aeropuerto_destino[0],
+        "Destination Airport City": aeropuerto_destino[1],
+        "Destination Airport Country": aeropuerto_destino[2],
+        "Destination Airport Latitude": aeropuerto_destino[3],
+        "Destination Airport Longitude": aeropuerto_destino[4]
+    })
+
+df3 = pd.DataFrame(filas)
+
+g3 = Grafo(len(df3), True, False)
+g3.aeropuertos(df3)
+df2 = g3.haversine(df3)
+g3.vuelos(df3, "Haversine")
+g3.mostrar()
+resultados3 = encontrar_aristas_repetidas(df3)
+print(resultados3)
