@@ -235,14 +235,89 @@ class Grafo:
         if componentes == 0:
             componentes = 1
         
+        print("\nConexidad: ")
         if componentes == 1:
             print("Grafo conexo")
         else:
             print("Grafo no conexo")
-            print(f"Numero de componentes: {componentes}")
+            print(f"\nNumero de componentes: {componentes}")
             for i in range(componentes):
                 print (f"Componente {i+1}: {n_componentes[i]} vertices")
 
+
+
+    def prim_vertice(self, inicio, visitados):
+        aristas_arbol = []
+        peso_total = 0
+        
+        cola = []
+        cola.append((0, inicio, -1))
+        
+        while cola:
+            indice_menor = 0
+            for i in range(1, len(cola)):
+                if cola[i][0] < cola[indice_menor][0]:
+                    indice_menor = i
+            
+            peso, vertice_actual, vertice_padre = cola.pop(indice_menor)
+            
+            if visitados[vertice_actual]:
+                continue
+            
+            visitados[vertice_actual] = True
+            if vertice_padre != -1:
+                aristas_arbol.append((peso, vertice_padre, vertice_actual))
+                peso_total += peso
+            
+            for elemento in self.adyacencia[vertice_actual]:
+                if self.ponderado:
+                    vecino, peso_arista = elemento
+                else:
+                    vecino, peso_arista = elemento, 1
+                
+                if not visitados[vecino]:
+                    cola.append((peso_arista, vecino, vertice_actual))
+        
+        return peso_total, aristas_arbol
+
+    
+
+    def prim_grafo(self):
+        if self.n == 0:
+            return []
+        
+        visitados = [False] * self.n
+        todos_arboles = []
+        
+        for vertice_inicio in range(self.n):
+            if not visitados[vertice_inicio]:
+                peso, aristas = self.prim_vertice(vertice_inicio, visitados)
+                todos_arboles.append((peso, aristas))
+        
+        return todos_arboles
+    
+
+
+    def arbol_expasion(self):
+        arboles = self.prim_grafo()
+        
+        print("\nARBOLES DE EXPANSIÓN MÍNIMA")
+        
+        for i in range(len(arboles)):
+            peso_componente, aristas_componente = arboles[i]
+             
+            print(f"\nComponente {i+1}")
+            print(f"Peso total: {peso_componente}")
+            print(f"Vértices: {len(aristas_componente) + 1}")
+            print("Aristas:")
+            
+            for arista in aristas_componente:
+                peso, u, v = arista
+                nombre_u = self.vertices[u].codigo if self.vertices[u] else f"V{u}"
+                nombre_v = self.vertices[v].codigo if self.vertices[v] else f"V{v}"
+                print(f"  {peso} : {nombre_u} -> {nombre_v}")
+
+        return arboles
 
 
 # Pruebas
@@ -264,12 +339,34 @@ grafo.agregar_arista(0, 1, 500)
 grafo.agregar_arista(1, 2, 400)
 
 
-
+# Menu
 df = pd.read_csv("flights_final.csv")
 df1 = df.head(20)
 g1 = Grafo(len(df1), True, False)
 g1.aeropuertos(df1)
 df1 = g1.haversine(df1)
+
 g1.vuelos(df1, "Haversine")
-g1.mostrar()
-g1.conexidad()
+
+def menu():
+    print("\nLAB 2 — Grafos - Rutas Transporte Aereo")
+    print("1) Grafo")
+    print("2) Conexidad")
+    print("3) Arbol de expansion minima")
+
+    print("0) Salir")
+    return input("Elige opción: ").strip()
+
+while True:
+        op = menu()
+        if op == "0":
+            break
+
+        elif op == "1":
+            g1.mostrar()
+
+        elif op == "2":
+            g1.conexidad()
+        
+        elif op == "3":
+            g1.arbol_expasion()
